@@ -1,0 +1,10 @@
+const TOKEN_KEY="pocketsmart_token";
+function getToken(){return localStorage.getItem(TOKEN_KEY)||"";}
+function setToken(token){localStorage.setItem(TOKEN_KEY,token);}
+function clearToken(){localStorage.removeItem(TOKEN_KEY);}
+async function api(url,options={}){const headers=new Headers(options.headers||{});const token=getToken();if(token)headers.set("Authorization",`Bearer ${token}`);const response=await fetch(url,{...options,headers});const text=await response.text();let data={};try{data=text?JSON.parse(text):{}}catch{data={detail:text||"Invalid server response"}}if(!response.ok)throw new Error(data.detail||"Request failed");return data;}
+function escapeHtml(value){return String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));}
+function money(value){return new Intl.NumberFormat("en-IN",{style:"currency",currency:"INR",maximumFractionDigits:0}).format(value||0);}
+function requireLogin(){if(!getToken()){location.href="/login";return false;}return true;}
+function renderResult(result,element){element.classList.remove("hidden");element.innerHTML=`<div class="card"><p><b>${escapeHtml(result.source||"AI")}</b></p><h2>${escapeHtml(result.summary||"")}</h2><h3>Budget allocation</h3><div class="grid">${(result.allocations||[]).map(a=>`<div class="card"><b>${escapeHtml(a.category)}</b><p>${money(a.amount)}</p></div>`).join("")}</div><h3>Recommendations</h3>${(result.recommendations||[]).map(r=>`<div class="rec"><b>${escapeHtml(r.name)}</b><p>${escapeHtml(r.estimated_price)}</p><p>${escapeHtml(r.reason)}</p><div class="links">${(r.links||[]).map(l=>`<a href="${escapeHtml(l.url)}" target="_blank" rel="noopener">${escapeHtml(l.platform)}</a>`).join("")}</div></div>`).join("")}<h3>Tips</h3><ul>${(result.tips||[]).map(t=>`<li>${escapeHtml(t)}</li>`).join("")}</ul></div>`;}
+document.addEventListener("DOMContentLoaded",()=>{const logout=document.getElementById("logout");if(logout)logout.onclick=()=>{clearToken();location.href="/";};const user=document.querySelector("[data-user]");if(user&&getToken())api("/api/auth/me").then(u=>user.textContent=u.name).catch(()=>clearToken());});
